@@ -18,9 +18,39 @@ time_table_drop = "DROP TABLE IF EXISTS time;"
 # CREATE TABLES
 
 staging_events_table_create= ("""
+CREATE TABLE IF NOT EXISTS song_event_log (
+    artist varchar, 
+    auth varchar, 
+    firstName varchar, 
+    gender varchar, 
+    itemInSession int, 
+    lastName varchar, 
+    length DECIMAL, 
+    level varchar, 
+    location varchar, 
+    method varchar, 
+    page varchar, 
+    registration varchar, 
+    sessionId int, 
+    song varchar, 
+    status int, 
+    ts timestamp, 
+    userAgent varchar, 
+    userId varchar);
 """)
 
 staging_songs_table_create = ("""
+CREATE TABLE IF NOT EXISTS songs_info (
+    song_id varchar,
+    title varchar,
+    artist_id varchar,
+    artist_name varchar,
+    artist_location varchar,
+    artist_latitude numeric,
+    artist_longitude numeric,
+    year int,
+    num_songs int,
+    duration float8);
 """)
 
 songplay_table_create = ("""
