@@ -18,7 +18,7 @@ time_table_drop = "DROP TABLE IF EXISTS time;"
 # CREATE TABLES
 
 staging_events_table_create= ("""
-CREATE TABLE IF NOT EXISTS song_event_log (
+CREATE TABLE IF NOT EXISTS staging_events (
     artist varchar, 
     auth varchar, 
     firstName varchar, 
@@ -34,13 +34,13 @@ CREATE TABLE IF NOT EXISTS song_event_log (
     sessionId int, 
     song varchar, 
     status int, 
-    ts timestamp, 
+    ts BIGINT SORTKEY,
     userAgent varchar, 
-    userId varchar);
+    userId varchar)
 """)
 
 staging_songs_table_create = ("""
-CREATE TABLE IF NOT EXISTS songs_info (
+CREATE TABLE IF NOT EXISTS staging_songs (
     song_id varchar,
     title varchar,
     artist_id varchar,
@@ -50,17 +50,17 @@ CREATE TABLE IF NOT EXISTS songs_info (
     artist_longitude numeric,
     year int,
     num_songs int,
-    duration float8);
+    duration float8)
 """)
 
 songplay_table_create = ("""
 CREATE TABLE IF NOT EXISTS songplays (
     songplay_id INT IDENTITY(0, 1) PRIMARY KEY SORTKEY, 
     start_time timestamp, 
-    user_id varchar REFERENCES users (user_id), 
+    user_id varchar, 
     level varchar, 
-    song_id varchar REFERENCES songs (song_id), 
-    artist_id varchar REFERENCES artists (artist_id), 
+    song_id varchar, 
+    artist_id varchar, 
     session_id int, 
     location varchar, 
     user_agent varchar
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS artists (
 
 time_table_create = ("""
 CREATE TABLE IF NOT EXISTS time (
-    start_time timestamp PRIMARY KEY, 
+    start_time TIMESTAMP PRIMARY KEY SORTKEY,
     hour int, 
     day int, 
     week int, 
@@ -112,25 +112,25 @@ CREATE TABLE IF NOT EXISTS time (
 # STAGING TABLES
 
 staging_events_copy = ("""
-    COPY staging_events FROM 's3://udacity-dend/log_data'
+    COPY staging_events FROM {}
     CREDENTIALS 'aws_iam_role={}'
     REGION 'us-west-2'
     FORMAT AS JSON 's3://udacity-dend/log_json_path.json';
-""").format(config.get('IAM_ROLE', 'ARN'))
+""").format(config.get('S3', 'LOG_DATA'), config.get('DWH', 'DWH_ROLE_ARN'))
 
 staging_songs_copy = ("""
-    COPY staging_songs FROM 's3://udacity-dend/song_data'
+    COPY staging_songs FROM {}
     CREDENTIALS 'aws_iam_role={}'
     REGION 'us-west-2'
     JSON 'auto';
-""").format(config.get('IAM_ROLE', 'ARN'))
+""").format(config.get('S3', 'SONG_DATA'), config.get('DWH', 'DWH_ROLE_ARN'))
 
 # FINAL TABLES
 
 songplay_table_insert = ("""
 INSERT INTO songplays (start_time, user_id, level, song_id, artist_id, session_id, location, user_agent)
 SELECT 
-    ev.ts AS start_time
+    TIMESTAMP 'epoch' + (ev.ts/1000) * INTERVAL '1 Second ' AS start_time
     ,ev.userId AS user_id
     ,ev.level AS level
     ,so.song_id AS song_id
@@ -182,7 +182,7 @@ FROM staging_songs
 time_table_insert = ("""
 INSERT INTO time (start_time, hour, day, week, month, year, weekday)
 SELECT DISTINCT 
-    ts AS start_time
+    TIMESTAMP 'epoch' + (ts/1000) * INTERVAL '1 Second ' AS start_time,
     EXTRACT(HOUR FROM start_time),
     EXTRACT(DAY FROM start_time),
     EXTRACT(WEEK FROM start_time),
