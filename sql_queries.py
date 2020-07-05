@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS songs_info (
 
 songplay_table_create = ("""
 CREATE TABLE IF NOT EXISTS songplays (
-    songplay_id SERIAL PRIMARY KEY, 
+    songplay_id INT IDENTITY(0, 1) PRIMARY KEY SORTKEY, 
     start_time timestamp, 
     user_id varchar REFERENCES users (user_id), 
     level varchar, 
@@ -112,40 +112,85 @@ CREATE TABLE IF NOT EXISTS time (
 # STAGING TABLES
 
 staging_events_copy = ("""
-""").format()
+    COPY staging_events FROM 's3://udacity-dend/log_data'
+    CREDENTIALS 'aws_iam_role={}'
+    REGION 'us-west-2'
+    FORMAT AS JSON 's3://udacity-dend/log_json_path.json';
+""").format(config.get('IAM_ROLE', 'ARN'))
 
 staging_songs_copy = ("""
-""").format()
+    COPY staging_songs FROM 's3://udacity-dend/song_data'
+    CREDENTIALS 'aws_iam_role={}'
+    REGION 'us-west-2'
+    JSON 'auto';
+""").format(config.get('IAM_ROLE', 'ARN'))
 
 # FINAL TABLES
 
 songplay_table_insert = ("""
 INSERT INTO songplays (start_time, user_id, level, song_id, artist_id, session_id, location, user_agent)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-ON CONFLICT DO NOTHING
+SELECT 
+    ev.ts AS start_time
+    ,ev.userId AS user_id
+    ,ev.level AS level
+    ,so.song_id AS song_id
+    ,so.artist_id AS artist_id
+    ,ev.sessionId AS session_id
+    ,ev.location AS location
+    ,ev.userAgent AS user_agent
+FROM staging_events ev
+JOIN staging_songs so ON (ev.song = so.title AND ev.artist = so.artist_name)
+WHERE ev.page='NextSong'
+
 """)
 
 user_table_insert = ("""
 INSERT INTO users (user_id, first_name, last_name, gender, level)
-VALUES (%s, %s, %s, %s, %s)
-ON CONFLICT DO NOTHING
+SELECT DISTINCT 
+    userId
+    ,firstName
+    ,lastName
+    ,gender
+    ,level
+FROM staging_events ev
+WHERE ev.page='NextSong'
+AND userId is NOT null
 """)
 
 song_table_insert = ("""
 INSERT INTO songs (song_id, title, artist_id, year, duration)
-VALUES (%s, %s, %s, %s, %s)
-ON CONFLICT DO NOTHING
+SELECT DISTINCT 
+    song_id
+    ,title
+    ,artist_id
+    ,year
+    ,duration 
+FROM staging_songs
 """)
 
 artist_table_insert = ("""
 INSERT INTO artists (artist_id, name, location, latitude, longitude)
-VALUES (%s, %s, %s, %s, %s) 
-ON CONFLICT DO NOTHING
+SELECT DISTINCT
+    artist_id
+    ,artist_name
+    ,artist_location
+    ,artist_latitude
+    ,artist_longitude
+FROM staging_songs
 """)
 
 time_table_insert = ("""
-INSERT INTO time (start_time, hour, day, week,  month, year, weekday)
-VALUES (%s, %s, %s, %s, %s, %s, %s)
+INSERT INTO time (start_time, hour, day, week, month, year, weekday)
+SELECT DISTINCT 
+    ts AS start_time
+    EXTRACT(HOUR FROM start_time),
+    EXTRACT(DAY FROM start_time),
+    EXTRACT(WEEK FROM start_time),
+    EXTRACT(MONTH FROM start_time),
+    EXTRACT(YEAR FROM start_time),
+    EXTRACT(DOW FROM start_time)
+FROM staging_events 
+WHERE staging_events.page='NextSong'
 """)
 
 # QUERY LISTS
