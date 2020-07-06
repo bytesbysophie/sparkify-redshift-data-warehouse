@@ -19,44 +19,24 @@ In more detail, a cloud based ETL pipeline has to be implemented to load data fr
 
 ## Installation <a name="Installation"></a>
 
-In AWS: Create IAM user (dwhadmin)
+AWS: 
+0. Create IAM user (dwhadmin) in the AWS management console 
 
-1. Add AWS KEY and SECRET into dwh_example.cfg and save it under dwh.cfg
-2. Run create_cluster.py
+Files:
+1. Add AWS KEY and SECRET of the dwhadmin user into dwh_example.cfg and save it under dwh.cfg
+2. Run create_cluster.py to create an AWS Redshift data warehouse
 3. Add DWH_ENDPOINT and DWH_ROLE_ARN into dwh.cfg (they get logged in step 2)
-4. Run create_tables.py
-5. Run etl.py
-
-
-**Preparation:**
-First step: create IAM User in AWS
-- create IAM user (dwhadmin)
-- give privileges to user
-- use access token and secret to buld cluster and configure it
-
-Add info to confi
-Create dwh.cfg and add the access token and secret for the newly created user provided by AWS
-
-
-(use the script create_cluster.py or do it manuellyy)
-Add DWH_ENDPOINT and DWH_ROLE_ARN in dwh.cfg
-Programatically create aws redshift cluster
-Install boto3 (python AWS SDK) - conda install boto3 or pip install boto3
-
-
-**Run Scripts:**
-* Run create_tables.py to create the tables in AWS Redshift
-* Run etl.py to load data from staging tables to analytics tables on Redshift
+4. Run create_tables.py to create the tables in AWS Redshift
+5. Run etl.py to load data from staging tables to analytics tables on Redshift
 
 **Make sure to delete your redshift cluster afterwards if not needed anymore to prevent unnecessary costs.**
 
 ## File Descriptions <a name="File-Descriptions"></a>
 
-
-
-* create_tables.py: This script creates the fact and dimension tables defined in sql_queries.py in Redshift
-* etl.py: Implementation of etl pipeline that loads data from S3 into statging tables on Redshift, processes them and finally loads them into the Redshift analytics tables
-* sql_queries.py: This script contains all SQL statements needed within the above files
+* create_cluster.py: Creates the AWS Redshift data warehouse and dwh role arn 
+* create_tables.py: Creates the fact and dimension tables defined in sql_queries.py in Redshift
+* etl.py: Implements the etl pipeline that loads data from S3 into statging tables on Redshift, processes them and finally loads them into the Redshift analytics tables
+* sql_queries.py: Contains all SQL statements needed within the above files
 * dwh_example.cfg: An example of the configuration file
 
 ## Authors and Acknowledgements <a name="Authors-Acknowledgements"></a>
