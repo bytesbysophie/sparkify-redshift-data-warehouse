@@ -7,8 +7,8 @@ import configparser
 config = configparser.ConfigParser()
 config.read('dwh.cfg')
 
-KEY                    = config.get('AWS','KEY')
-SECRET                 = config.get('AWS','SECRET')
+AWS_KEY                = config.get('AWS','AWS_KEY')
+AWS_SECRET             = config.get('AWS','AWS_SECRET')
 
 DWH_CLUSTER_TYPE       = config.get("DWH","DWH_CLUSTER_TYPE")
 DWH_NUM_NODES          = config.get("DWH","DWH_NUM_NODES")
@@ -25,21 +25,22 @@ DWH_IAM_ROLE_NAME      = config.get("DWH", "DWH_IAM_ROLE_NAME")
 
 def create_clients():
 
-    iam = boto3.client('iam',aws_access_key_id=KEY,
-                        aws_secret_access_key=SECRET,
+    iam = boto3.client('iam',aws_access_key_id=AWS_KEY,
+                        aws_secret_access_key=AWS_SECRET,
                         region_name='us-west-2'
                     )
 
     redshift = boto3.client('redshift',
                         region_name="us-west-2",
-                        aws_access_key_id=KEY,
-                        aws_secret_access_key=SECRET
+                        aws_access_key_id=AWS_KEY,
+                        aws_secret_access_key=AWS_SECRET
                         )
 
     ec2 = boto3.resource('ec2',
                        region_name="us-east-1",
-                       aws_access_key_id=AWS_ACCESS_KEY_ID,
-                       aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+                       aws_access_key_id=AWS_KEY,
+                       aws_secret_access_key=AWS_SECRET
+                        )
 
     print("Created Clients")
     return iam, redshift, ec2
@@ -90,8 +91,6 @@ def create_redshift_cluster(iam, redshift, ec2):
     except Exception as e:
         print(e)
 
-    myClusterProps = redshift.describe_clusters(ClusterIdentifier=DWH_CLUSTER_IDENTIFIER)['Clusters'][0]
-
     # Wait until the cluster is available for further operations
     while True:
         response = redshift.describe_clusters(ClusterIdentifier=DWH_CLUSTER_IDENTIFIER)
@@ -100,6 +99,8 @@ def create_redshift_cluster(iam, redshift, ec2):
             print("The cluster is ready")
             break
         time.sleep(10)
+
+    myClusterProps = redshift.describe_clusters(ClusterIdentifier=DWH_CLUSTER_IDENTIFIER)['Clusters'][0]
 
     # Open incoming TCP port
     try:
@@ -116,10 +117,8 @@ def create_redshift_cluster(iam, redshift, ec2):
     except Exception as e:
         print(e)
 
-
-    endpoint = myClusterProps['Endpoint']['Address']
-    print("cluster endpoint: {}".format(endpoint))
-
+    print("IAM Role ARN:  {}".format(myClusterProps['IamRoles'][0]['IamRoleArn']))
+    print("Endpoint:  {}".format(myClusterProps['Endpoint']['Address']))
 
 def main():
 

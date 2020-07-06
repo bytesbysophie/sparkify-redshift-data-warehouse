@@ -29,7 +29,7 @@ def main():
 
     print("Loading tables")
     load_staging_tables(cur, conn)
-    print("Creating tables")
+    print("Inserting data")
     insert_tables(cur, conn)
 
     print("Closing connection")
