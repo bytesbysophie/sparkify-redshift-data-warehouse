@@ -24,6 +24,17 @@ DWH_IAM_ROLE_NAME      = config.get("DWH", "DWH_IAM_ROLE_NAME")
 
 
 def create_clients():
+    '''
+    Create an Identity and Access Management, a Redshift and an EC2 client
+    
+    Args:
+    None
+    
+    Returns (list):
+    iam: Identity and Access Management client
+    redshift: Redshift client
+    ec2: EC2 client
+    '''
 
     iam = boto3.client('iam',aws_access_key_id=AWS_KEY,
                         aws_secret_access_key=AWS_SECRET,
@@ -47,6 +58,15 @@ def create_clients():
 
 
 def create_iam_role(iam):
+    '''
+    Create an Identity and Access Management Role
+    
+    Args:
+    iam: Identity and Access Management client
+    
+    Returns:
+    iam_arn: ARN of the created Identity and Access Management Role
+    '''
 
     try:
         print("Creating a new IAM Role") 
@@ -68,10 +88,23 @@ def create_iam_role(iam):
                         PolicyArn="arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
                         )['ResponseMetadata']['HTTPStatusCode']
 
-    return iam.get_role(RoleName=DWH_IAM_ROLE_NAME)['Role']['Arn']
+    iam_arn = iam.get_role(RoleName=DWH_IAM_ROLE_NAME)['Role']['Arn']
+
+    return iam_arn
 
 
 def create_redshift_cluster(iam, redshift, ec2):
+    '''
+    Create an Amazon Redshift Cluster
+    
+    Args:
+    iam: Identity and Access Management client
+    redshift: Redshift client
+    ec2: EC2 client
+    
+    Returns:
+    None
+    '''
 
     try:
         roleArn = create_iam_role(iam)
@@ -102,28 +135,30 @@ def create_redshift_cluster(iam, redshift, ec2):
 
     myClusterProps = redshift.describe_clusters(ClusterIdentifier=DWH_CLUSTER_IDENTIFIER)['Clusters'][0]
 
-    # Open incoming TCP port
-    try:
-        vpc = ec2.Vpc(id=myClusterProps['VpcId'])
-        defaultSg = list(vpc.security_groups.all())[0]
-        print(defaultSg)
-        defaultSg.authorize_ingress(
-            GroupName=defaultSg.group_name,
-            CidrIp='0.0.0.0/0',
-            IpProtocol='TCP',
-            FromPort=int(DWH_PORT),
-            ToPort=int(DWH_PORT)
-        )
-    except Exception as e:
-        print(e)
+    # # Open incoming TCP port
+    # try:
+    #     vpc = ec2.Vpc(id=myClusterProps['VpcId'])
+    #     defaultSg = list(vpc.security_groups.all())[0]
+    #     print(defaultSg)
+    #     defaultSg.authorize_ingress(
+    #         GroupName=defaultSg.group_name,
+    #         CidrIp='0.0.0.0/0',
+    #         IpProtocol='TCP',
+    #         FromPort=int(DWH_PORT),
+    #         ToPort=int(DWH_PORT)
+    #     )
+    # except Exception as e:
+    #     print(e)
 
     print("IAM Role ARN:  {}".format(myClusterProps['IamRoles'][0]['IamRoleArn']))
     print("Endpoint:  {}".format(myClusterProps['Endpoint']['Address']))
+
 
 def main():
 
     iam, redshift, ec2 = create_clients()
     create_redshift_cluster(iam, redshift, ec2)
+
 
 if __name__ == "__main__":
     main()

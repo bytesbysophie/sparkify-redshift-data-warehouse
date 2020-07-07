@@ -6,7 +6,7 @@ config.read('dwh.cfg')
 
 AWS_KEY      = config.get('AWS','AWS_KEY')
 AWS_SECRET  = config.get('AWS','AWS_SECRET')
-
+DWH_CLUSTER_IDENTIFIER = config.get('DWH','DWH_CLUSTER_IDENTIFIER')
 
 def main():
 
